@@ -11,7 +11,6 @@ import NewListings from "./pages/NewListings";
 import AddCoin from "./pages/AddCoin";
 import Auth from "./pages/Auth";
 import TokenDetail from "./pages/TokenDetail";
-import Install from "./pages/Install";
 
 const queryClient = new QueryClient();
 
@@ -28,7 +27,6 @@ const App = () => (
             <Route path="/add-coin" element={<AddCoin />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/token/:address" element={<TokenDetail />} />
-            <Route path="/install" element={<Install />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
