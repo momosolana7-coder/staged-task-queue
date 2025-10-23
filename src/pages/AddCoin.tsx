@@ -22,6 +22,7 @@ const tokenSchema = z.object({
   websiteUrl: z.string().url({ message: "Invalid website URL" }).optional().or(z.literal("")),
   telegramUrl: z.string().url({ message: "Invalid Telegram URL" }).optional().or(z.literal("")),
   twitterUrl: z.string().url({ message: "Invalid Twitter URL" }).optional().or(z.literal("")),
+  transactionHash: z.string().trim().nonempty({ message: "Transaction hash is required" }).max(100),
 });
 
 const AddCoin = () => {
@@ -77,6 +78,7 @@ const AddCoin = () => {
       websiteUrl: formData.get('websiteUrl') as string,
       telegramUrl: formData.get('telegramUrl') as string,
       twitterUrl: formData.get('twitterUrl') as string,
+      transactionHash: formData.get('transactionHash') as string,
     };
 
     try {
@@ -115,14 +117,34 @@ const AddCoin = () => {
             telegram_url: validated.telegramUrl || null,
             twitter_url: validated.twitterUrl || null,
             logo_url: logoUrl,
+            transaction_hash: validated.transactionHash,
           },
         ]);
 
       if (error) throw error;
 
+      // Send email notification
+      try {
+        await supabase.functions.invoke('send-listing-notification', {
+          body: {
+            tokenName: validated.tokenName,
+            tokenSymbol: validated.tokenSymbol,
+            tokenAddress: validated.tokenAddress,
+            transactionHash: validated.transactionHash,
+            submitterAddress: address,
+            websiteUrl: validated.websiteUrl,
+            telegramUrl: validated.telegramUrl,
+            twitterUrl: validated.twitterUrl,
+          },
+        });
+      } catch (emailError) {
+        console.error('Error sending email notification:', emailError);
+        // Don't fail the submission if email fails
+      }
+
       toast({
         title: "Success!",
-        description: "Your token has been submitted for review.",
+        description: "Your token has been submitted for review. Notification sent!",
       });
 
       e.currentTarget.reset();
@@ -169,6 +191,28 @@ const AddCoin = () => {
               <div>
                 <CardTitle className="text-3xl">Add Your Token</CardTitle>
                 <CardDescription>Submit your token to be listed on GIGACOCK</CardDescription>
+              </div>
+            </div>
+            
+            {/* Payment Requirements */}
+            <div className="mt-6 p-4 bg-accent/5 border border-accent/20 rounded-lg space-y-3">
+              <h3 className="font-semibold text-lg flex items-center gap-2">
+                💰 Listing Fee
+              </h3>
+              <div className="space-y-2 text-sm">
+                <p className="text-muted-foreground">
+                  To list your token on GIGACOCK platform, please send:
+                </p>
+                <div className="bg-background/50 p-3 rounded border border-border">
+                  <p className="font-semibold text-accent">$100 worth of $GIGACOCK tokens</p>
+                  <p className="text-xs text-muted-foreground mt-1">Payment Wallet:</p>
+                  <code className="text-xs bg-muted px-2 py-1 rounded block mt-1 break-all">
+                    0xd769A8183C7Fa2B5E351B051b727e496dAAcf5De
+                  </code>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  ⚠️ After payment, enter the transaction hash in the form below
+                </p>
               </div>
             </div>
           </CardHeader>
@@ -294,6 +338,24 @@ const AddCoin = () => {
                       placeholder="https://x.com/..." 
                     />
                   </div>
+                </div>
+
+                <div className="space-y-2 pt-4 border-t border-border">
+                  <Label htmlFor="transactionHash" className="flex items-center gap-2">
+                    Transaction Hash *
+                    <span className="text-xs text-muted-foreground font-normal">
+                      (Payment confirmation)
+                    </span>
+                  </Label>
+                  <Input 
+                    id="transactionHash" 
+                    name="transactionHash"
+                    placeholder="0x..." 
+                    required 
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Enter the transaction hash after sending $100 worth of $GIGACOCK tokens
+                  </p>
                 </div>
 
                 <Button 
