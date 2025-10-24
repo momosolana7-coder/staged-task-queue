@@ -49,36 +49,28 @@ export const useTrendingByVotes = () => {
   return useQuery({
     queryKey: ['trending-by-votes'],
     queryFn: async () => {
-      // Get submitted tokens first
-      const { data: submittedTokens, error: submittedError } = await supabase
-        .from('submitted_tokens')
-        .select('token_address');
-
-      if (submittedError) throw submittedError;
-      if (!submittedTokens || submittedTokens.length === 0) return [];
-
-      const submittedAddresses = submittedTokens.map(t => t.token_address.toLowerCase());
-
       // Get top voted tokens with at least 1 vote
       const { data: voteCounts, error } = await supabase
         .from('token_vote_counts')
         .select('token_address, vote_count')
         .gt('vote_count', 0)
         .order('vote_count', { ascending: false })
-        .limit(50);
+        .limit(20);
 
-      if (error) throw error;
-      if (!voteCounts || voteCounts.length === 0) return [];
+      if (error) {
+        console.error('Error fetching vote counts:', error);
+        throw error;
+      }
+      
+      if (!voteCounts || voteCounts.length === 0) {
+        console.log('No vote counts found');
+        return [];
+      }
 
-      // Filter to only include submitted tokens
-      const filteredVotes = voteCounts.filter(v => 
-        submittedAddresses.includes(v.token_address.toLowerCase())
-      ).slice(0, 20);
-
-      if (filteredVotes.length === 0) return [];
+      console.log('Vote counts:', voteCounts);
 
       // Get token addresses
-      const tokenAddresses = filteredVotes.map(v => v.token_address);
+      const tokenAddresses = voteCounts.map(v => v.token_address);
 
       // Fetch token data from Dexscreener
       const tokenDataPromises = tokenAddresses.map(async (address) => {
@@ -98,7 +90,12 @@ export const useTrendingByVotes = () => {
             (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0)
           )[0];
           
-          return bestPair;
+          // Attach vote count to the pair
+          const voteData = voteCounts.find(v => v.token_address.toLowerCase() === address.toLowerCase());
+          return {
+            ...bestPair,
+            voteCount: voteData?.vote_count || 0
+          };
         } catch (error) {
           console.error(`Error fetching token ${address}:`, error);
           return null;
@@ -107,8 +104,12 @@ export const useTrendingByVotes = () => {
 
       const tokenData = await Promise.all(tokenDataPromises);
       
-      // Filter out nulls and return valid pairs
-      const validPairs = tokenData.filter((pair): pair is DexPair => pair !== null);
+      // Filter out nulls and return valid pairs sorted by vote count
+      const validPairs = tokenData
+        .filter((pair): pair is DexPair & { voteCount: number } => pair !== null)
+        .sort((a, b) => b.voteCount - a.voteCount);
+      
+      console.log('Valid pairs with votes:', validPairs);
       
       return validPairs;
     },
