@@ -6,6 +6,7 @@ import { useTokenByAddress } from "@/hooks/useDexScreener";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import TokenConverter from "@/components/TokenConverter";
+import VoteButton from "@/components/VoteButton";
 import { FaTwitter, FaTelegram, FaGlobe, FaDiscord } from "react-icons/fa";
 
 const TokenDetail = () => {
@@ -92,8 +93,13 @@ const TokenDetail = () => {
                     }}
                   />
                   <div className="flex-1">
-                    <CardTitle className="text-3xl">{mainPair.baseToken.name}</CardTitle>
-                    <p className="text-muted-foreground">{mainPair.baseToken.symbol}</p>
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <CardTitle className="text-3xl">{mainPair.baseToken.name}</CardTitle>
+                        <p className="text-muted-foreground">{mainPair.baseToken.symbol}</p>
+                      </div>
+                      <VoteButton tokenAddress={mainPair.baseToken.address} />
+                    </div>
                     <div className="flex flex-wrap gap-2 mt-2">
                       {mainPair.info?.socials?.map((social, idx) => (
                         <a

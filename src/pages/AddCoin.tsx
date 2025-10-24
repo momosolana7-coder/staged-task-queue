@@ -104,6 +104,17 @@ const AddCoin = () => {
         logoUrl = publicUrl;
       }
 
+      // Check if token already exists
+      const { data: existingToken } = await supabase
+        .from('submitted_tokens')
+        .select('id')
+        .eq('token_address', validated.tokenAddress)
+        .single();
+
+      if (existingToken) {
+        throw new Error('This token has already been submitted');
+      }
+
       const { error } = await supabase
         .from('submitted_tokens')
         .insert([
@@ -118,10 +129,16 @@ const AddCoin = () => {
             twitter_url: validated.twitterUrl || null,
             logo_url: logoUrl,
             transaction_hash: validated.transactionHash,
+            status: 'pending',
           },
         ]);
 
-      if (error) throw error;
+      if (error) {
+        if (error.code === '23505') {
+          throw new Error('This token has already been submitted');
+        }
+        throw error;
+      }
 
       // Send email notification
       try {
@@ -152,10 +169,17 @@ const AddCoin = () => {
       setLogoPreview("");
       navigate('/');
     } catch (error) {
+      console.error('Submission error:', error);
       if (error instanceof z.ZodError) {
         toast({
           title: "Validation Error",
           description: error.errors[0].message,
+          variant: "destructive",
+        });
+      } else if (error instanceof Error) {
+        toast({
+          title: "Error",
+          description: error.message,
           variant: "destructive",
         });
       } else {
