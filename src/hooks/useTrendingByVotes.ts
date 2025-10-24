@@ -49,36 +49,18 @@ export const useTrendingByVotes = () => {
   return useQuery({
     queryKey: ['trending-by-votes'],
     queryFn: async () => {
-      // Get submitted tokens to filter only approved tokens
-      const { data: submittedTokens, error: submittedError } = await supabase
-        .from('submitted_tokens')
-        .select('token_address, status')
-        .eq('status', 'approved');
-
-      if (submittedError) throw submittedError;
-      if (!submittedTokens || submittedTokens.length === 0) return [];
-
-      const approvedAddresses = submittedTokens.map(t => t.token_address.toLowerCase());
-
-      // Get top voted tokens that are also approved
+      // Get top voted tokens
       const { data: voteCounts, error } = await supabase
         .from('token_vote_counts')
         .select('token_address, vote_count')
         .order('vote_count', { ascending: false })
-        .limit(50);
+        .limit(20);
 
       if (error) throw error;
       if (!voteCounts || voteCounts.length === 0) return [];
 
-      // Filter to only include approved tokens
-      const filteredVotes = voteCounts.filter(v => 
-        approvedAddresses.includes(v.token_address.toLowerCase())
-      ).slice(0, 20);
-
-      if (filteredVotes.length === 0) return [];
-
       // Get token addresses
-      const tokenAddresses = filteredVotes.map(v => v.token_address);
+      const tokenAddresses = voteCounts.map(v => v.token_address);
 
       // Fetch token data from Dexscreener
       const tokenDataPromises = tokenAddresses.map(async (address) => {
